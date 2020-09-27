@@ -1,14 +1,16 @@
 package com.connect4.game;
 
-import com.connect4.exception.GameException;
-import com.connect4.game.move.Move;
 import com.connect4.game.move.MoveDAOService;
 import com.connect4.game.move.MoveRequest;
+import com.connect4.game.move.Validator;
 import com.connect4.user.User;
 import com.connect4.user.UserDAOService;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.util.SerializationUtils;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -23,7 +25,9 @@ public class GameResource {
 
   @Autowired private MoveDAOService moveDAOService;
 
-  @Autowired private GameStateDAOService gameStateDAOService;
+  @Autowired private Validator validator;
+
+  @Autowired private Processor processor;
 
   @PostMapping(path = "/start")
   public ResponseEntity<Object> start() {
@@ -36,61 +40,22 @@ public class GameResource {
 
   @PostMapping(path = "/move")
   public ResponseEntity<Object> move(@RequestBody MoveRequest moveRequest) {
-    String message = "Default Message";
-    GameState gameState;
-    ConnectGame connectGame;
-    if (isValidMove(moveRequest)) {
-      List movesTillNow = moveDAOService.getMoveByUuid(moveRequest.getUuid());
-      String player;
-      if (movesTillNow == null || movesTillNow.size() % 2 == 0) {
-        player = "Y";
-      } else {
-        player = "R";
-      }
 
-      if (movesTillNow != null && movesTillNow.size() == 0) {
-        int height = 6;
-        int width = 7;
-        connectGame = new ConnectGame(width, height);
-        gameState = new GameState();
-        gameState.setUuid(moveRequest.getUuid());
-      } else {
-        gameState = gameStateDAOService.getGameState(moveRequest.getUuid());
-        connectGame = (ConnectGame) SerializationUtils.deserialize(gameState.getConnectGame());
-      }
-      connectGame.chooseAndDrop(player.charAt(0), moveRequest.getColumn());
-      message = connectGame.toString();
-      gameState.setConnectGame(SerializationUtils.serialize(connectGame));
-      if (movesTillNow != null && movesTillNow.size() == 0) {
-        gameStateDAOService.saveGameState(gameState);
-      } else {
-        gameStateDAOService.updateGameState(gameState);
-      }
-      if (connectGame.isWinningPlay()) {
-        message = message + " " + player + " won.";
-        User user = userDAOService.getUser(moveRequest.getUuid());
-        user.setGameOver(true);
-        userDAOService.updateUser(user);
-      }
+    validator.validate(moveRequest);
 
-      Move move = new Move();
-      move.setColumnPlayed(moveRequest.getColumn());
-      move.setPlayer(player);
-      move.setUuid(moveRequest.getUuid());
-      moveDAOService.saveMove(move);
-    }
-
-    return ResponseEntity.ok(message);
+    return ResponseEntity.ok(processor.process(moveRequest));
   }
 
-  private boolean isValidMove(MoveRequest moveRequest) {
-    if (!(0 <= moveRequest.getColumn() && moveRequest.getColumn() < 7)) {
-      throw new GameException("Column must be between 0 and 6");
+  @GetMapping(path = "/getAllMoves/{uuid}")
+  public ResponseEntity<Object> getAllMoves(@PathVariable String uuid) throws Exception {
+    List movesTillNow = moveDAOService.getMoveByUuid(uuid);
+    ObjectMapper objectMapper = new ObjectMapper();
+    String json = null;
+    try {
+      json = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(movesTillNow);
+    } catch (JsonProcessingException e) {
+      throw new Exception();
     }
-    User user = userDAOService.getUser(moveRequest.getUuid());
-    if (user == null || user.getGameOver()) {
-      throw new GameException("Game already over or user not present.");
-    }
-    return true;
+    return ResponseEntity.ok(json);
   }
 }
