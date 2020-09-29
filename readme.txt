@@ -5,7 +5,7 @@ url:- POST https://connect4-rohit.herokuapp.com/start/
 Response:- Game ready. Your id for the game is:- ae2621f8-45ca-4c57-aec8-97500e65e8be
 
 2. To make Moves:-
- POST http://connect4-rohit.herokuapp.com/move/
+ POST https://connect4-rohit.herokuapp.com/move/
 JSON body:- {
                 "uuid": "ae2621f8-45ca-4c57-aec8-97500e65e8be",
                 "column": 4
@@ -20,7 +20,7 @@ Response:- 0123456
            ....Y..
 
 3. To make moves with invalid request
- POST http://connect4-rohit.herokuapp.com/move/
+ POST https://connect4-rohit.herokuapp.com/move/
 JSON body:- {
                 "uuid": "ae2621f8-45ca-4c57-aec8-97500e65e8be",
                 "column": 9
@@ -33,8 +33,8 @@ Response :-
 }
 
 3. To get all moves by id
-GET http://connect4-rohit.herokuapp.com/getAllMoves/{id}
-so for example GET http://connect4-rohit.herokuapp.com/getAllMoves/ae2621f8-45ca-4c57-aec8-97500e65e8be
+GET https://connect4-rohit.herokuapp.com/getAllMoves/{id}
+so for example GET https://connect4-rohit.herokuapp.com/getAllMoves/ae2621f8-45ca-4c57-aec8-97500e65e8be
 Response:- [ {
              "player" : "Y",
              "columnPlayed" : 4,
